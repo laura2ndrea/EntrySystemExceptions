@@ -1,8 +1,6 @@
 package campus.u2.entrysystem.Utilities.exceptions;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import org.springframework.http.HttpStatus;
 
 public class ErrorResponses {

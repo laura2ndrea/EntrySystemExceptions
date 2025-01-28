@@ -1,19 +1,22 @@
 package campus.u2.entrysystem.access.application;
 
-import campus.u2.entrysystem.Utilities.exceptions.GlobalException;
 import campus.u2.entrysystem.access.domain.Access;
+import campus.u2.entrysystem.access.infrastructure.exceptions.AccessInvalidInputException;
+import campus.u2.entrysystem.access.infrastructure.exceptions.AccessNotFoundException;
 import campus.u2.entrysystem.accessnotes.application.AccessNoteRepository;
 import campus.u2.entrysystem.accessnotes.domain.AccessNote;
+import campus.u2.entrysystem.accessnotes.infrastructure.exceptions.AccessNoteNotFoundException;
 import campus.u2.entrysystem.people.application.PeopleRepository;
 import campus.u2.entrysystem.people.domain.People;
+import campus.u2.entrysystem.people.infrastructure.exceptions.PeopleNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.Date;
 import campus.u2.entrysystem.porters.application.PortersRepository;
 import campus.u2.entrysystem.porters.domain.Porters;
+import campus.u2.entrysystem.porters.infrastructure.exceptions.PorterNotFoundException;
 import jakarta.transaction.Transactional;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class AccessService {
@@ -35,148 +38,143 @@ public class AccessService {
 
     // Methods 
     
-    // To save an access
+    // Save an Access
     @Transactional
     public Access saveAccess(Access access) {
         if (access == null) {
-            throw new GlobalException("Empty object, please try again ");
+            throw new AccessInvalidInputException("Access object cannot be null");
         }
         return accessRepository.saveAccess(access);
     }
-
-    // To create an access 
+    
+    // Create an Access
     @Transactional
     public Access createAccess(Date entryAccess, Date exitAccess, Boolean accessType) {
         if (entryAccess == null) {
-            throw new GlobalException("Entry date cannot be empty");
+            throw new AccessInvalidInputException("Entry date cannot be null");
         }
         if (exitAccess == null) {
-            throw new GlobalException("Exist date cannot be empty");
+            throw new AccessInvalidInputException("Exit date cannot be null");
         }
         if (accessType == null) {
-            throw new GlobalException("Access type cannot be empty");
+            throw new AccessInvalidInputException("Access type cannot be null");
         }
         Access access = new Access(entryAccess, exitAccess, accessType);
         return accessRepository.saveAccess(access);
     }
-
-    // To delete and access 
+    
+    // Delete an Access
     @Transactional
     public void deleteAccess(Long id) {
         Access access = accessRepository.getAccessById(id)
-                .orElseThrow(() -> new GlobalException("Access not found"));
+                .orElseThrow(() -> new AccessNotFoundException("Access with ID " + id + " not found"));
 
         People people = peopleRepository.getPeopleById(access.getPeople().getId())
-                .orElseThrow(() -> new GlobalException("People not found"));
+                .orElseThrow(() -> new PeopleNotFoundException("Person associated with Access not found"));
 
         people.removeAccess(access);
         access.setPeople(null);
-
-        accessRepository.deleteAccess(access); // Importante: Asegúrate de que este es el método correcto para eliminar la entidad
+        accessRepository.deleteAccess(access);
     }
-
-    // To get all accesses
+    
+    // Get all Access records
     @Transactional
     public List<Access> getAllAccesses() {
         return accessRepository.getAllAccesses();
     }
-
-    // To get an access by id
+    
+    // Get Access by ID
     @Transactional
     public Access getAccessById(Long id) {
         if (id == null) {
-            throw new GlobalException("Id not valid please try again");
+            throw new AccessInvalidInputException("ID cannot be null");
         }
-        Optional<Access> accessOpt = accessRepository.getAccessById(id);
-        if (accessOpt.isPresent()) {
-            return accessOpt.get();
-        } else {
-            throw new GlobalException("Id is not valid please try again ");
-        }
+        return accessRepository.getAccessById(id)
+                .orElseThrow(() -> new AccessNotFoundException("Access with ID " + id + " not found"));
     }
-
-    // To add a note to an access (with an object) 
+    
+    // Add a Note to an Access (using an object)
     @Transactional
     public Access addAccessNoteToAccess(Long idAccess, AccessNote accessNote) {
         Access access = accessRepository.getAccessById(idAccess)
-                .orElseThrow(() -> new GlobalException("Access not found"));
+                .orElseThrow(() -> new AccessNotFoundException("Access with ID " + idAccess + " not found"));
+
+        if (accessNote == null) {
+            throw new AccessInvalidInputException("AccessNote object cannot be null");
+        }
 
         accessNote.setAccess(access);
         access.addAccessNotes(accessNote);
         noteRepository.saveAccessNote(accessNote);
-        accessRepository.saveAccess(access);
-        return access;
+        return accessRepository.saveAccess(access);
     }
-
-    // To add a note to an access (create inside the accessNote)
+    
+    // Add a Note to an Access (creating inside the method)
     @Transactional
     public Access addAccessNoteToAccess(Long idAccess, String note) {
         if (idAccess == null || note == null || note.isEmpty()) {
-            throw new GlobalException("Error with the inputs, please try again");
+            throw new AccessInvalidInputException("ID and note cannot be null or empty");
         }
-        Optional<Access> accessOpt = accessRepository.getAccessById(idAccess);
-        if (accessOpt.isPresent()) {
-            Access access = accessOpt.get();
-            AccessNote accessNote = new AccessNote(note);
-            access.addAccessNotes(accessNote);
-            return accessRepository.saveAccess(access);
-        } else {
-            throw new GlobalException("Access with id " + idAccess + " not found");
-        }
-    }
+        Access access = accessRepository.getAccessById(idAccess)
+                .orElseThrow(() -> new AccessNotFoundException("Access with ID " + idAccess + " not found"));
 
-    // To remove a note from an access
+        AccessNote accessNote = new AccessNote(note);
+        access.addAccessNotes(accessNote);
+        return accessRepository.saveAccess(access);
+    }
+    
+     // Remove a Note from an Access
     @Transactional
     public Access removeAccessNoteFromAccess(Long idAccessNote) {
-        Optional<AccessNote> noteOpt = noteRepository.findById(idAccessNote); 
-        AccessNote note = noteOpt.get(); 
-        Long idAccess = note.getAccess().getIdAccess(); 
-        Optional<Access> accessOpt = accessRepository.getAccessById(idAccess); 
-        Access access = accessOpt.get(); 
+        AccessNote note = noteRepository.findById(idAccessNote)
+                .orElseThrow(() -> new AccessNoteNotFoundException("AccessNote with ID " + idAccessNote + " not found"));
+
+        Access access = accessRepository.getAccessById(note.getAccess().getIdAccess())
+                .orElseThrow(() -> new AccessNotFoundException("Access associated with the note not found"));
+
         note.setAccess(null);
         access.removeAccessNotes(note);
         noteRepository.deleteAccessNote(note);
         return accessRepository.saveAccess(access);
     }
-
-    // To add a porter to an access
+    
+    // Add a Porter to an Access
     @Transactional
     public Access addPorterToAccess(Long accessId, Long porterId) {
         Access access = accessRepository.getAccessById(accessId)
-                .orElseThrow(() -> new RuntimeException("Access with ID " + accessId + " not found."));
+                .orElseThrow(() -> new AccessNotFoundException("Access with ID " + accessId + " not found"));
+
         Porters porter = portersRepository.getPorterById(porterId)
-                .orElseThrow(() -> new RuntimeException("Porter with ID " + porterId + " not found."));
+                .orElseThrow(() -> new PorterNotFoundException("Porter with ID " + porterId + " not found"));
+
         access.getPorters().add(porter);
         porter.getAccesses().add(access);
         accessRepository.saveAccess(access);
         portersRepository.savePorter(porter);
         return access;
     }
-
-    // To remove a porter from an access
+    
+     // Remove a Porter from an Access
     @Transactional
     public Access removePorterFromAccess(Long accessId, Long porterId) {
-        Optional<Access> accessOpt = accessRepository.getAccessById(accessId);
-        if (accessOpt.isPresent()) {
-            Access access = accessOpt.get();
-            Optional<Porters> porterOpt = portersRepository.getPorterById(porterId);
-            if (porterOpt.isPresent()) {
-                Porters porter = porterOpt.get();
-                access.getPorters().remove(porter);  // Delete the porter in the access
-                porter.getAccesses().remove(access);  // Delete the access in the porter
-                accessRepository.saveAccess(access);  // Save the update access
-                portersRepository.savePorter(porter);  // Save the update porter
-                return access;
-            }
-        }
-        return null;  // If the porter or the access is not found
+        Access access = accessRepository.getAccessById(accessId)
+                .orElseThrow(() -> new AccessNotFoundException("Access with ID " + accessId + " not found"));
+
+        Porters porter = portersRepository.getPorterById(porterId)
+                .orElseThrow(() -> new PorterNotFoundException("Porter with ID " + porterId + " not found"));
+
+        access.getPorters().remove(porter);
+        porter.getAccesses().remove(access);
+        accessRepository.saveAccess(access);
+        portersRepository.savePorter(porter);
+        return access;
     }
 
-    // To find all the access between two dates
+    //Find Access between Dates
     @Transactional
     public List<Access> findAccessBetweenDates(Date startDate, Date endDate) {
         if (startDate == null || endDate == null) {
-            throw new GlobalException("Date is not valid");
+            throw new AccessInvalidInputException("Start and end dates cannot be null");
         }
         return accessRepository.findAccessBetweenDates(startDate, endDate);
     }

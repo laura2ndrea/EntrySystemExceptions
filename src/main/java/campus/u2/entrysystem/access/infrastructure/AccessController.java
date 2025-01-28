@@ -5,7 +5,8 @@ import campus.u2.entrysystem.access.domain.Access;
 import campus.u2.entrysystem.accessnotes.domain.AccessNote;
 import campus.u2.entrysystem.porters.application.PortersService;
 import campus.u2.entrysystem.porters.domain.Porters;
-import campus.u2.entrysystem.Utilities.exceptions.GlobalException;
+import campus.u2.entrysystem.access.infrastructure.exceptions.AccessNotFoundException;
+import campus.u2.entrysystem.porters.infrastructure.exceptions.PorterNotFoundException;
 import java.util.Date;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,20 +89,22 @@ public class AccessController {
     public List<Access> findAccessBetweenDates(@RequestParam Date startDate, @RequestParam Date endDate) {
         return accessService.findAccessBetweenDates(startDate, endDate);
     }
-
+    
     // To update a porter in an access 
     @PutMapping("/{idAccess}/porters/{idPorter}")
     public Access updatePorterInAccess(@PathVariable Long idAccess, @PathVariable Long idPorter) {
         Access access = accessService.getAccessById(idAccess);
         if (access == null) {
-            throw new GlobalException("Access with id " + idAccess + " not found");
+            throw new AccessNotFoundException("Access with id " + idAccess + " not found");
         }
+        
         Porters porter = porterService.getPorterById(idPorter);
         if (porter == null) {
-            // Si no se encuentra el portero, lanzar una excepción o retornar un error
-            throw new GlobalException("Porter with id " + idPorter + " not found");
+            throw new PorterNotFoundException("Porter with id " + idPorter + " not found");
         }
-        access.getPorters().add(porter); 
+
+        access.getPorters().add(porter);
         return accessService.saveAccess(access);
     }
+    
 }
