@@ -3,6 +3,7 @@ package campus.u2.entrysystem.access.application;
 import campus.u2.entrysystem.access.domain.Access;
 import campus.u2.entrysystem.access.infrastructure.exceptions.AccessInvalidInputException;
 import campus.u2.entrysystem.access.infrastructure.exceptions.AccessNotFoundException;
+import campus.u2.entrysystem.access.infrastructure.exceptions.AccessTypeMismatchException;
 import campus.u2.entrysystem.accessnotes.application.AccessNoteRepository;
 import campus.u2.entrysystem.accessnotes.domain.AccessNote;
 import campus.u2.entrysystem.accessnotes.infrastructure.exceptions.AccessNoteNotFoundException;
@@ -85,12 +86,20 @@ public class AccessService {
     
     // Get Access by ID
     @Transactional
-    public Access getAccessById(Long id) {
-        if (id == null) {
-            throw new AccessInvalidInputException("ID cannot be null");
+    public Access getAccessById(String id) {
+        try {
+            Long accessId = Long.parseLong(id);
+
+            if (accessId == null) {
+                throw new AccessInvalidInputException("ID cannot be null");
+            }
+
+            return accessRepository.getAccessById(accessId)
+                    .orElseThrow(() -> new AccessNotFoundException("Access with ID " + accessId + " not found"));
+
+        } catch (NumberFormatException ex) {
+            throw new AccessTypeMismatchException("Long", id);
         }
-        return accessRepository.getAccessById(id)
-                .orElseThrow(() -> new AccessNotFoundException("Access with ID " + id + " not found"));
     }
     
     // Add a Note to an Access (using an object)

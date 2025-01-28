@@ -1,8 +1,8 @@
 package campus.u2.entrysystem.Utilities.exceptions;
 
 import campus.u2.entrysystem.access.infrastructure.exceptions.AccessInvalidInputException;
-import campus.u2.entrysystem.access.infrastructure.exceptions.AccessNotAllowedException;
 import campus.u2.entrysystem.access.infrastructure.exceptions.AccessNotFoundException;
+import campus.u2.entrysystem.access.infrastructure.exceptions.AccessTypeMismatchException;
 import campus.u2.entrysystem.accessnotes.infrastructure.exceptions.AccessNoteNotFoundException;
 import campus.u2.entrysystem.people.infrastructure.exceptions.PeopleNotFoundException;
 import campus.u2.entrysystem.porters.infrastructure.exceptions.PorterNotFoundException;
@@ -40,17 +40,17 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
     
-    @ExceptionHandler(AccessNotAllowedException.class)
-    @ResponseStatus(HttpStatus.FORBIDDEN)
-    public ResponseEntity<Object> handleAccessNotAllowedException(AccessNotAllowedException ex) {
+    @ExceptionHandler(AccessTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<Object> handleAccessTypeMismatchException(AccessTypeMismatchException ex) {
         ErrorResponses errorResponse = new ErrorResponses(
-                "Access not allowed",
-                ex.getMessage(),
-                HttpStatus.FORBIDDEN,
-                HttpStatus.FORBIDDEN.value()
-        );
-        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
-    }
+            "Type mismatch error",
+            ex.getMessage(),
+            HttpStatus.BAD_REQUEST,
+            HttpStatus.BAD_REQUEST.value()
+    );
+    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+}
     
     // Exceptions for access notes 
     @ExceptionHandler(AccessNoteNotFoundException.class)
